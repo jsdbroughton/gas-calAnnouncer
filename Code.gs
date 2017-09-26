@@ -10,7 +10,7 @@ function onOpen() {
 }
 
 function setCal() {
-  var d = DocumentApp.getUi().showSidebar(HtmlService.createTemplateFromFile('html')
+  var d = DocumentApp.getUi().showSidebar(HtmlService.createTemplateFromFile('sidebar')
       .evaluate().setTitle('Synchronisation Settings'));
 }
 
