@@ -19,7 +19,8 @@
       .withUserObject(this)
       .setCalProperties({
         cals: $('#calendars').val(),
-        detail: $('#timedEvents').prop('checked')
+        detail: $('#timedEvents').prop('checked'),
+        header: $('#header').val()
       });
   }
   
@@ -38,6 +39,7 @@
       select.append(calOption);
     } 
     
+    $('#header').val(settings.header);    
     $('#timedEvents').prop('checked', settings.detail == 'true');    
     $('#setCal').prop('disabled', false);
     $('#timedEvents').prop('disabled', false);

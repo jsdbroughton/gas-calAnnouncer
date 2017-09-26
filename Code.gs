@@ -11,14 +11,16 @@ function onOpen() {
 
 function setCal() {
   var d = DocumentApp.getUi().showSidebar(HtmlService.createTemplateFromFile('sidebar')
-      .evaluate().setTitle('Synchronisation Settings'));
+                                          .evaluate().setTitle('Synchronisation Settings'));
 }
 
 function setCalProperties(settings) {
   
   var cal = settings.cals;
-  var detail = settings.detail;
+  var detail = settings.detail || 'false';
+  var header = settings.header || '';
   
+  var h = PropertiesService.getDocumentProperties().setProperty('header', header);
   var p = PropertiesService.getDocumentProperties().setProperty('calId', cal);
   var d = PropertiesService.getDocumentProperties().setProperty('detail', detail);
 }
@@ -27,8 +29,10 @@ function getCalendars() {
   var cals = CalendarApp.getAllCalendars();
   var p = PropertiesService.getDocumentProperties().getProperty('calId');
   var d = PropertiesService.getDocumentProperties().getProperty('detail');
+  var h = PropertiesService.getDocumentProperties().getProperty('header');
   
   return {
+    header: h,
     detail: d,
     cals: cals.map(function(cal) { // cal = CalendarApp.getAllCalendars()[0];
       var c = {};
@@ -37,24 +41,25 @@ function getCalendars() {
       c.id = cal.getId();
       c.selected = (c.id == p);
       
-    return c;   
+      return c;   
     })
   };
 }
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename)
-      .getContent();
+  .getContent();
 }
 
 function runTime(){  
   
-  var calId = '', det = 'false';
+  var calId = '', det = 'false', header = '';
   var p = PropertiesService.getDocumentProperties()
-    
+  
   try {
     calId = p.getProperty('calId');
     det = p.getProperty('detail');
+    header = p.getProperty('header');
     Announcer.setDetail(det);
     Announcer.setCalendar(calId);
   } catch(err) {
@@ -77,6 +82,31 @@ function runTime(){
   
   debugger;
 }
+
+var dayInWords = function(y, d) {
+  
+  y = y != false;
+  
+  var m_names = new Array("January", "February", "March",
+                          "April", "May", "June",
+                          "July", "August", "September",
+                          "October", "November", "December");
+  
+  var curr_date = d.getDate();
+  var sup = "th";
+  if (curr_date == 1 || curr_date == 21 || curr_date ==31) { sup = "st"; } 
+  else if (curr_date == 2 || curr_date == 22){ sup = "nd"; } 
+  else if (curr_date == 3 || curr_date == 23) { sup = "rd"; }
+  
+  var curr_month = d.getMonth();
+  var curr_year = d.getFullYear();
+  
+  var s = [curr_date + sup, m_names[curr_month], curr_year];
+  
+  s = s.slice(0, y ? 3 : 2).join(' ');
+  
+  return s;
+};
 
 var Announcer = (function(announcer) {
   
@@ -139,24 +169,7 @@ var Announcer = (function(announcer) {
       tomorrowDay = (new Date(tomorrowTomorrow)).getDay();
   thisWeek = getWeek(new Date(tomorrowToday));
   
-  var dayInWords = (function(d) {
-    
-    var m_names = new Array("January", "February", "March",
-                            "April", "May", "June",
-                            "July", "August", "September",
-                            "October", "November", "December");
-    
-    var curr_date = d.getDate();
-    var sup = "th";
-    if (curr_date == 1 || curr_date == 21 || curr_date ==31) { sup = "st"; } 
-    else if (curr_date == 2 || curr_date == 22){ sup = "nd"; } 
-    else if (curr_date == 3 || curr_date == 23) { sup = "rd"; }
-    
-    var curr_month = d.getMonth();
-    var curr_year = d.getFullYear();
-    
-    return [curr_date + sup, m_names[curr_month], + curr_year].join(' ');
-  }((new Date(tomorrowToday))));
+  
   
   void(0);
   
@@ -178,8 +191,10 @@ var Announcer = (function(announcer) {
     
     if (calendarId && eventsLoaded) {
       
+      var header = PropertiesService.getDocumentProperties().getProperty('header') || 'Announcer Script for';
+      
       scriptId = scriptId || announcer.scriptId;
-      var name = 'Announcer Script for ' + dayInWords;
+      var name = header + ' – ' + dayInWords(true, new Date(tomorrowToday));
       var d;
       
       try {
@@ -218,21 +233,51 @@ var Announcer = (function(announcer) {
     }
   }
   
+  var formatAMPM = function formatAMPM(d) {
+    var h = d.getHours();
+    return (h % 12 || 12)
+    + ':' + ('00' + d.getMinutes().toString()).slice(-2)
+    + ' ' + (h < 12 ? 'A' : 'P') + 'M';
+  };
+  
   var appendEvents = function(body, header, events, detail) {
+    
     
     if(events.length > 0) {
       
       headerBold = {};
       headerBold[DocumentApp.Attribute.BOLD] = true;
       
-      var header = body.appendParagraph(header).setHeading(DocumentApp.ParagraphHeading.HEADING2).setSpacingAfter(0).setSpacingBefore(10).setAttributes(headerBold);
+      var header = body.appendParagraph(header)
+      .setHeading(DocumentApp.ParagraphHeading.HEADING2)
+      .setSpacingAfter(0)
+      .setSpacingBefore(10)
+      .setAttributes(headerBold);
       
       events.forEach(function(item){
         
+        if (item.time) {
+          item.timeString = formatAMPM(new Date(item.time));
+        }
+        
+        if (item.end) {
+          item.endString =  formatAMPM(new Date(item.end));
+        }
+        
         var title = item.summary,
             description= (item.description || ''),
-            time = (item.allDay ? 'All Day' : '⏰\t' + item.time),
-            location = (item.location ? '@\t' + item.location : '\tNo Location Given');
+            time = '';
+        
+        if (item.allDay) {
+          time = 'All Day';
+        } else {        
+          time += '⏰\t';
+          time += (!item.today) ? (dayInWords(false, new Date(item.time)) + ' – ') : '';
+          time += item.timeString;
+          time += item.end ? (' - ' + item.endString) : '';
+        }
+        
+        location = (item.location ? '@\t' + item.location : '\tNo Location Given');
         
         var italic = {};
         italic[DocumentApp.Attribute.ITALIC] = true;
@@ -241,7 +286,9 @@ var Announcer = (function(announcer) {
         normal[DocumentApp.Attribute.ITALIC] = false;
         
         item.titleHeader = body.appendParagraph(title).setHeading(DocumentApp.ParagraphHeading.HEADING3);
-        item.descriptionPara = body.appendParagraph(description).setAttributes(italic).setSpacingAfter(8);
+        if (item.description) {
+          item.descriptionPara = body.appendParagraph(description).setAttributes(italic).setSpacingAfter(8);
+        }
         
         if (Announcer.detail !== "false") {
           item.timePara = body.appendParagraph(time).setAttributes(normal);
@@ -296,6 +343,9 @@ var Announcer = (function(announcer) {
         event.description = evt.description || '';
         event.summary = evt.summary || '';
         event.time = evt.start.dateTime || (new Date(evt.start.date)).toISOString();
+        
+        event.end = evt.end.dateTime || (new Date(evt.end.date)).toISOString();
+        
         event.allDay = !evt.start.dateTime;
         event.recurrence = (evt.recurrence || []).map(function(rec) { // rec = evt.recurrence[0]
           var r = {},
@@ -313,9 +363,7 @@ var Announcer = (function(announcer) {
             eDay = (new Date(eDate)).getDay();
         
         if (eDate == tomorrowToday) {
-          Object.defineProperty(events, 'today', {
-            enumerable: true
-          });
+          event.today = true;
           events.today.push(event);
           return;
         }
