@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css" />
+    <style>
+      .branding-below {
+        bottom: 56px;
+        top: 0;
+      }     
+      #calName {
+        white-space: nowrap;
+      }
+      #calId {
+        font-family: monospace;
+        white-space: nowrap;
+      }
+      #current {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar branding-below">
+      <p id="current">Currently syncing with:<br /><strong><span id="calName"></span></strong><!--&nbsp;&lt;<span id="calId"></span>&gt;--></p>
+      <div class="block form-group">
+        <label for="calendars">Choose a new calendar to link to</label>
+        <select id="calendars"></select>
+      </div>
+      <div class="block form-group" title="When checked the announcer schedule will distinguish timed and all day events.">
+        <label for ="timedEvents">Use timed and all day events?</label>
+        <input type="checkbox" id="timedEvents" disabled="disabled" />
+      </div>
+      <div class="block form-group">
+        <button class="action" id="setCal" disabled="disabled">Save Settings</button>
+      </div>
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+      <?!= include('JavaScript'); ?>
+    </div>
+  </body>
+</html>

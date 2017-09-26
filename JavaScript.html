@@ -1,0 +1,45 @@
+<script>
+  $(function() {
+    $('#setCal').click(saveCal);
+    google.script.run.withSuccessHandler(showCals).getCalendars();
+  });
+  
+  function saveCal() {
+    this.disabled = true;
+    google.script.run
+      .withSuccessHandler(
+        function(returnSuccess, element) {
+          element.disabled = false;
+          google.script.run
+            .withSuccessHandler(function(){       
+              google.script.host.close();
+            })
+          .runTime();
+        })
+      .withUserObject(this)
+      .setCalProperties({
+        cals: $('#calendars').val(),
+        detail: $('#timedEvents').prop('checked')
+      });
+  }
+  
+  function showCals(settings) {
+    var select = $('#calendars');
+    var cals = settings.cals;
+    select.empty();
+    for (var i = 0; i < cals.length; i++) {
+      var selected = cals[i].selected ? 'selected="selected"' : '';
+      if (cals[i].selected) {   
+        $('#calId').text(cals[i].id);
+        $('#calName').text(cals[i].name);
+        $('#current').show();
+      } 
+      var calOption = '<option value="' + cals[i].id + '" ' + selected + '>' + cals[i].name + '</option>';
+      select.append(calOption);
+    } 
+    
+    $('#timedEvents').prop('checked', settings.detail == 'true');    
+    $('#setCal').prop('disabled', false);
+    $('#timedEvents').prop('disabled', false);
+  }
+</script>
