@@ -189,27 +189,27 @@ var Announcer = (function(announcer) {
   
   announcer.writeScript = function(scriptId) {  
     
+    var header = PropertiesService.getDocumentProperties().getProperty('header') || 'Announcer Script for';
+    var name = header + ' – ' + dayInWords(true, new Date(tomorrowToday));
+    
+    try {
+      d = DocumentApp.getActiveDocument();
+      d.setName(name);
+    } catch (err) {
+      DocumentApp.getUi().alert("No document found.");
+      d = DocumentApp.create(name);
+      announcer.scriptId = d.getId();
+    }    
+
+    var body = d.getBody().clear();    
+    body.appendParagraph(name).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendHorizontalRule();
+    
     if (calendarId && eventsLoaded) {
       
-      var header = PropertiesService.getDocumentProperties().getProperty('header') || 'Announcer Script for';
-      
       scriptId = scriptId || announcer.scriptId;
-      var name = header + ' – ' + dayInWords(true, new Date(tomorrowToday));
       var d;
       
-      try {
-        d = DocumentApp.getActiveDocument();
-        d.setName(name);
-      } catch (err) {
-        DocumentApp.getUi().alert("No document found.");
-        d = DocumentApp.create(name);
-        announcer.scriptId = d.getId();
-      }    
-      
-      var body = d.getBody().clear();
-      
-      body.appendParagraph(name).setHeading(DocumentApp.ParagraphHeading.HEADING1);
-      body.appendHorizontalRule();
       
       var today = eventsStore.today.slice(0);
       var tomorrow = eventsStore.tomorrow.slice(0);
@@ -241,7 +241,6 @@ var Announcer = (function(announcer) {
   };
   
   var appendEvents = function(body, header, events, detail) {
-    
     
     if(events.length > 0) {
       
@@ -313,6 +312,7 @@ var Announcer = (function(announcer) {
         calendarId = c.id;
       }
     } catch(err) {
+      var e = err;
       calendarId = undefined;
     }
     return this;
@@ -332,6 +332,9 @@ var Announcer = (function(announcer) {
     if (calendarId) {
       // Query the calendar
       Calendar.Events.list(calendarId, {
+        orderBy: 'startTime',
+        singleEvents: true,
+        showDeleted: false,
         timeMin: (new Date(tomorrowToday)).toISOString(),
         timeMax: endTime.toISOString()
       })
